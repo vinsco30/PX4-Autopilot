@@ -133,7 +133,6 @@ FixedwingPositionControl::parameters_update()
 	_tecs.set_integrator_gain_pitch(_param_fw_t_I_gain_pit.get());
 	_tecs.set_throttle_slewrate(_param_fw_thr_slew_max.get());
 	_tecs.set_vertical_accel_limit(_param_fw_t_vert_acc.get());
-	_tecs.set_roll_throttle_compensation(_param_fw_t_rll2thr.get());
 	_tecs.set_pitch_damping(_param_fw_t_ptch_damp.get());
 	_tecs.set_altitude_error_time_constant(_param_fw_t_h_error_tc.get());
 	_tecs.set_altitude_rate_ff(_param_fw_t_hrate_ff.get());
@@ -364,6 +363,7 @@ FixedwingPositionControl::vehicle_attitude_poll()
 		}
 
 		const Eulerf euler_angles(R);
+		_roll = euler_angles(0);
 		_pitch = euler_angles(1);
 		_yaw = euler_angles(2);
 
@@ -372,10 +372,6 @@ FixedwingPositionControl::vehicle_attitude_poll()
 
 		Vector3f body_velocity = R.transpose() * Vector3f{_local_pos.vx, _local_pos.vy, _local_pos.vz};
 		_body_velocity_x = body_velocity(0);
-
-		// load factor due to banking
-		const float load_factor = 1.f / cosf(euler_angles(0));
-		_tecs.set_load_factor(load_factor);
 	}
 }
 
@@ -2461,8 +2457,11 @@ FixedwingPositionControl::reset_landing_state()
 float FixedwingPositionControl::calculateTrimThrottle(float throttle_min,
 		float throttle_max, float airspeed_sp)
 {
+	// Approximate drag based on airspeed, vehicle weight and roll angle, and map it to a trim throttle taking the current
+	// air density into account.
 
-	// drag modelling
+	// Drag modelling (parasite drag): calculate mapping airspeed-->throttle, assuming a linear relation with different gradient
+	// above and blow trim. This is tunable thorugh FW_ASPD_MIN and FW_ASPD_MAX.
 	float throttle_trim = _param_fw_thr_trim.get(); // throttle required at sea level during standard conditions.
 
 	if (PX4_ISFINITE(airspeed_sp) && _param_fw_thr_aspd_min.get() > FLT_EPSILON
@@ -2476,6 +2475,11 @@ float FixedwingPositionControl::calculateTrimThrottle(float throttle_min,
 				(_param_fw_airspd_max.get() - _param_fw_airspd_trim.get()) * (airspeed_sp - _param_fw_airspd_trim.get());
 	}
 
+	// Drag modelling (induced drag): calculate mapping load factor--> throttle, assuming a linear relation that is independent of
+	// airspeed. This is tunable through FW_INDCD_DRG_RTO (ratio of induced drag to total drag at trim conditions).
+	// The assumption further is that FW_THR_TIM is set correctly and reflects the thrust equivalent of the drag at trim, and that
+	// throttle and thrust are linear --> double the load factor requires double trim throttle * FW_INDCD_DRG_RTO.
+
 	float weight_ratio = 1.0f;
 
 	if (_param_weight_base.get() > FLT_EPSILON && _param_weight_gross.get() > FLT_EPSILON) {
@@ -2483,17 +2487,27 @@ float FixedwingPositionControl::calculateTrimThrottle(float throttle_min,
 					       MAX_WEIGHT_RATIO);
 	}
 
+	float load_factor_from_bank_angle = 1.f;
+
+	if (PX4_ISFINITE(_roll)) {
+		load_factor_from_bank_angle = constrain(1.f / cosf(_roll), 1.f, 2.f);
+	}
+
+	const float increased_throttle_from_load_factor = _param_fw_indcd_drg_rto.get() * (load_factor_from_bank_angle - 1.f) *
+			weight_ratio * _param_fw_thr_trim.get();
+
+	throttle_trim += increased_throttle_from_load_factor;
+
+	// scale throttle as a function of sqrt(rho0/rho), which is the same relation as TAS/EAS
 	float air_density_throttle_scale = 1.0f;
 
 	if (PX4_ISFINITE(_air_density)) {
-		// scale throttle as a function of sqrt(rho0/rho)
 		const float eas2tas = sqrtf(CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C / _air_density);
 		const float eas2tas_at_5000m_amsl = sqrtf(CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C / AIR_DENSITY_STANDARD_ATMOS_5000_AMSL);
 		air_density_throttle_scale = constrain(eas2tas, 1.f, eas2tas_at_5000m_amsl);
 	}
 
-	// compensate trim throttle for both weight and air density
-	return math::constrain(throttle_trim * sqrtf(weight_ratio) * air_density_throttle_scale, throttle_min, throttle_max);
+	return math::constrain(throttle_trim * air_density_throttle_scale, throttle_min, throttle_max);
 }
 
 void

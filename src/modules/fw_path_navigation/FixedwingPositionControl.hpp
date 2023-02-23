@@ -259,6 +259,7 @@ private:
 	double _current_longitude{0};
 	float _current_altitude{0.f};
 
+	float _roll{0.0f};
 	float _pitch{0.0f};
 	float _yaw{0.0f};
 	float _yawrate{0.0f};
@@ -892,7 +893,6 @@ private:
 		(ParamFloat<px4::params::FW_T_I_GAIN_THR>) _param_fw_t_I_gain_thr,
 		(ParamFloat<px4::params::FW_T_I_GAIN_PIT>) _param_fw_t_I_gain_pit,
 		(ParamFloat<px4::params::FW_T_PTCH_DAMP>) _param_fw_t_ptch_damp,
-		(ParamFloat<px4::params::FW_T_RLL2THR>) _param_fw_t_rll2thr,
 		(ParamFloat<px4::params::FW_T_SINK_MAX>) _param_fw_t_sink_max,
 		(ParamFloat<px4::params::FW_T_SINK_MIN>) _param_fw_t_sink_min,
 		(ParamFloat<px4::params::FW_T_SPDWEIGHT>) _param_fw_t_spdweight,
@@ -909,6 +909,8 @@ private:
 
 		(ParamFloat<px4::params::FW_THR_ASPD_MIN>) _param_fw_thr_aspd_min,
 		(ParamFloat<px4::params::FW_THR_ASPD_MAX>) _param_fw_thr_aspd_max,
+
+		(ParamFloat<px4::params::FW_INDCD_DRG_RTO>) _param_fw_indcd_drg_rto,
 
 		(ParamFloat<px4::params::FW_THR_TRIM>) _param_fw_thr_trim,
 		(ParamFloat<px4::params::FW_THR_IDLE>) _param_fw_thr_idle,

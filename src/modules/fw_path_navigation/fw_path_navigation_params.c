@@ -622,27 +622,6 @@ PARAM_DEFINE_FLOAT(FW_T_SPD_DEV_STD, 0.05f);
  */
 PARAM_DEFINE_FLOAT(FW_T_SPD_PRC_STD, 0.2f);
 
-
-/**
- * Roll -> Throttle feedforward
- *
- * Increasing this gain turn increases the amount of throttle that will
- * be used to compensate for the additional drag created by turning.
- * Ideally this should be set to  approximately 10 x the extra sink rate
- * in m/s created by a 45 degree bank turn. Increase this gain if
- * the aircraft initially loses energy in turns and reduce if the
- * aircraft initially gains energy in turns. Efficient high aspect-ratio
- * aircraft (eg powered sailplanes) can use a lower value, whereas
- * inefficient low aspect-ratio models (eg delta wings) can use a higher value.
- *
- * @min 0.0
- * @max 20.0
- * @decimal 1
- * @increment 0.5
- * @group FW TECS
- */
-PARAM_DEFINE_FLOAT(FW_T_RLL2THR, 15.0f);
-
 /**
  * Speed <--> Altitude priority
  *
@@ -1089,3 +1068,26 @@ PARAM_DEFINE_FLOAT(FW_THR_ASPD_MIN, 0.f);
  * @group FW TECS
  */
 PARAM_DEFINE_FLOAT(FW_THR_ASPD_MAX, 0.f);
+
+/**
+ * Induced drag ratio at trim
+ *
+ * The ratio of induced drag to the total drag at level trim flight.
+ * This value is used to compensate for increased induced drag with
+ * increasing load factor. The load factor increases with weight
+ * (see WEIGHT_GROSS and WEIGHT_BASE) and the current roll angle.
+ *
+ * Increasing this gain turn increases the amount of throttle that will
+ * be used to compensate for the additional drag created by turning.
+ * Increase this gain if the aircraft initially loses energy in turns and
+ * reduce if the aircraft initially gains energy in turns. Efficient high
+ * aspect-ratio aircraft (eg powered sailplanes) can use a lower value, whereas
+ * inefficient low aspect-ratio models (eg delta wings) can use a higher value.
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.01
+ * @group FW TECS
+ */
+PARAM_DEFINE_FLOAT(FW_INDCD_DRG_RTO, 0.2f);

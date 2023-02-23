@@ -515,11 +515,6 @@ TECSControl::ControlValues TECSControl::_calcThrottleControlSteRate(const STERat
 	ControlValues ste_rate;
 	ste_rate.setpoint = specific_energy_rates.spe_rate.setpoint + specific_energy_rates.ske_rate.setpoint;
 
-	// Adjust the demanded total energy rate to compensate for induced drag rise in turns.
-	// Assume induced drag scales linearly with normal load factor.
-	// The additional normal load factor is given by (1/cos(bank angle) - 1)
-	ste_rate.setpoint += param.load_factor_correction * (param.load_factor - 1.f);
-
 	ste_rate.setpoint = constrain(ste_rate.setpoint, limit.STE_rate_min, limit.STE_rate_max);
 	ste_rate.estimate = _ste_rate_estimate_filter.getState();
 

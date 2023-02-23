@@ -223,9 +223,6 @@ public:
 		float integrator_gain_throttle;				///< Integrator gain used by the throttle demand calculation.
 		float throttle_damping_gain;				///< Damping gain of the throttle demand calculation [s].
 		float throttle_slewrate;				///< Throttle demand slew rate limit [1/s].
-
-		float load_factor_correction;				///< Gain from normal load factor increase to total energy rate demand [m²/s³].
-		float load_factor;					///< Additional normal load factor.
 	};
 
 	/**
@@ -622,9 +619,6 @@ public:
 	void set_throttle_damp(float throttle_damp) { _control_param.throttle_damping_gain = throttle_damp; };
 	void set_throttle_slewrate(float slewrate) { _control_param.throttle_slewrate = slewrate; };
 
-	void set_roll_throttle_compensation(float compensation) { _control_param.load_factor_correction = compensation; };
-	void set_load_factor(float load_factor) { _control_param.load_factor = load_factor; };
-
 	void set_ste_rate_time_const(float time_const) { _control_param.ste_rate_time_const = time_const; };
 
 	void set_seb_rate_ff_gain(float ff_gain) { _control_param.seb_rate_ff = ff_gain; };
@@ -709,8 +703,6 @@ private:
 		.integrator_gain_throttle = 0.0f,
 		.throttle_damping_gain = 0.0f,
 		.throttle_slewrate = 0.0f,
-		.load_factor_correction = 0.0f,
-		.load_factor = 1.0f,
 	};
 
 	TECSControl::Flag _control_flag{

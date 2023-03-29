@@ -148,8 +148,11 @@ void TECSReferenceModel::update(const float dt, const AltitudeReferenceState &se
 	}
 
 	// Consider the altitude rate setpoint already smooth. No need to filter further, simply hold the value for the altitude rate reference.
+	bool height_rate_controlled = false;
+
 	if (PX4_ISFINITE(setpoint.alt_rate)) {
 		_alt_rate_ref = setpoint.alt_rate;
+		height_rate_controlled = true;
 
 	} else {
 		_alt_rate_ref = 0.0f;
@@ -162,23 +165,32 @@ void TECSReferenceModel::update(const float dt, const AltitudeReferenceState &se
 	_alt_control_traj_generator.setMaxAccel(param.vert_accel_limit);
 	_alt_control_traj_generator.setMaxVel(fmax(param.max_climb_rate, param.max_sink_rate));
 
-	if (altitude_control_enable) {
-		const float target_climbrate = math::min(param.target_climbrate, param.max_climb_rate);
-		const float target_sinkrate = math::min(param.target_sinkrate, param.max_sink_rate);
+	const float target_climbrate = math::min(param.target_climbrate, param.max_climb_rate);
+	const float target_sinkrate = math::min(param.target_sinkrate, param.max_sink_rate);
 
-		const float delta_trajectory_to_target_m = setpoint.alt - _alt_control_traj_generator.getCurrentPosition();
-
-		float altitude_rate_target = math::signNoZero<float>(delta_trajectory_to_target_m) *
-					     math::trajectory::computeMaxSpeedFromDistance(
-						     param.jerk_max, param.vert_accel_limit, fabsf(delta_trajectory_to_target_m), 0.0f);
-
-		altitude_rate_target = math::constrain(altitude_rate_target, -target_sinkrate, target_climbrate);
+	if (height_rate_controlled) {
+		const float altitude_rate_target = math::constrain(setpoint.alt_rate, -target_sinkrate, target_climbrate);
 
 		_alt_control_traj_generator.updateDurations(altitude_rate_target);
 		_alt_control_traj_generator.updateTraj(dt);
 
 	} else {
-		_alt_control_traj_generator.reset(0.0f, 0.0f, altitude);
+		if (altitude_control_enable) {
+
+			const float delta_trajectory_to_target_m = setpoint.alt - _alt_control_traj_generator.getCurrentPosition();
+
+			float altitude_rate_target = math::signNoZero<float>(delta_trajectory_to_target_m) *
+						     math::trajectory::computeMaxSpeedFromDistance(
+							     param.jerk_max, param.vert_accel_limit, fabsf(delta_trajectory_to_target_m), 0.0f);
+
+			altitude_rate_target = math::constrain(altitude_rate_target, -target_sinkrate, target_climbrate);
+
+			_alt_control_traj_generator.updateDurations(altitude_rate_target);
+			_alt_control_traj_generator.updateTraj(dt);
+
+		} else {
+			_alt_control_traj_generator.reset(0.0f, 0.0f, altitude);
+		}
 	}
 }
 

@@ -35,7 +35,7 @@
 #include <px4_platform_common/cli.h>
 #include <px4_platform_common/posix.h>
 
-#include "microdds_client.h"
+#include "xrcedds_client.h"
 
 #include <uxr/client/client.h>
 #include <uxr/client/util/ping.h>
@@ -47,7 +47,7 @@
 #include <unistd.h>
 
 #if defined(CONFIG_NET) || defined(__PX4_POSIX)
-# define MICRODDS_CLIENT_UDP 1
+# define XRCEDDS_CLIENT_UDP 1
 #endif
 
 #define STREAM_HISTORY  4
@@ -79,8 +79,8 @@ void on_time(uxrSession *session, int64_t current_time, int64_t received_timesta
 	}
 }
 
-MicroddsClient::MicroddsClient(Transport transport, const char *device, int baudrate, const char *agent_ip,
-			       const char *port, bool localhost_only, bool custom_participant, const char *client_namespace) :
+XrceddsClient::XrceddsClient(Transport transport, const char *device, int baudrate, const char *agent_ip,
+			     const char *port, bool localhost_only, bool custom_participant, const char *client_namespace) :
 	ModuleParams(nullptr),
 	_localhost_only(localhost_only), _custom_participant(custom_participant),
 	_client_namespace(client_namespace)
@@ -120,7 +120,7 @@ MicroddsClient::MicroddsClient(Transport transport, const char *device, int baud
 
 	} else if (transport == Transport::Udp) {
 
-#if defined(MICRODDS_CLIENT_UDP)
+#if defined(XRCEDDS_CLIENT_UDP)
 		_transport_udp = new uxrUDPTransport();
 		strncpy(_port, port, PORT_MAX_LENGTH - 1);
 		strncpy(_agent_ip, agent_ip, AGENT_IP_MAX_LENGTH - 1);
@@ -141,7 +141,7 @@ MicroddsClient::MicroddsClient(Transport transport, const char *device, int baud
 	}
 }
 
-MicroddsClient::~MicroddsClient()
+XrceddsClient::~XrceddsClient()
 {
 	delete _subs;
 	delete _pubs;
@@ -157,7 +157,7 @@ MicroddsClient::~MicroddsClient()
 	}
 }
 
-void MicroddsClient::run()
+void XrceddsClient::run()
 {
 	if (!_comm) {
 		PX4_ERR("init failed");
@@ -186,7 +186,7 @@ void MicroddsClient::run()
 
 		// Session
 		// The key identifier of the Client. All Clients connected to an Agent must have a different key.
-		const uint32_t key = (uint32_t)_param_xrce_key.get();
+		const uint32_t key = (uint32_t)_param_xrce_dds_key.get();
 
 		if (key == 0) {
 			PX4_ERR("session key must be different from zero");
@@ -386,7 +386,7 @@ void MicroddsClient::run()
 	}
 }
 
-int MicroddsClient::setBaudrate(int fd, unsigned baud)
+int XrceddsClient::setBaudrate(int fd, unsigned baud)
 {
 	int speed;
 
@@ -523,14 +523,14 @@ int MicroddsClient::setBaudrate(int fd, unsigned baud)
 	return 0;
 }
 
-int MicroddsClient::custom_command(int argc, char *argv[])
+int XrceddsClient::custom_command(int argc, char *argv[])
 {
 	return print_usage("unknown command");
 }
 
-int MicroddsClient::task_spawn(int argc, char *argv[])
+int XrceddsClient::task_spawn(int argc, char *argv[])
 {
-	_task_id = px4_task_spawn_cmd("microdds_client",
+	_task_id = px4_task_spawn_cmd("xrcedds_client",
 				      SCHED_DEFAULT,
 				      SCHED_PRIORITY_DEFAULT,
 				      PX4_STACK_ADJUSTED(10000),
@@ -545,10 +545,10 @@ int MicroddsClient::task_spawn(int argc, char *argv[])
 	return 0;
 }
 
-int MicroddsClient::print_status()
+int XrceddsClient::print_status()
 {
 	PX4_INFO("Running, %s", _connected ? "connected" : "disconnected");
-#if defined(MICRODDS_CLIENT_UDP)
+#if defined(XRCEDDS_CLIENT_UDP)
 
 	if (_transport_udp != nullptr) {
 		PX4_INFO("Using transport: udp");
@@ -571,7 +571,7 @@ int MicroddsClient::print_status()
 	return 0;
 }
 
-MicroddsClient *MicroddsClient::instantiate(int argc, char *argv[])
+XrceddsClient *XrceddsClient::instantiate(int argc, char *argv[])
 {
 	bool error_flag = false;
 	int myoptind = 1;
@@ -581,7 +581,7 @@ MicroddsClient *MicroddsClient::instantiate(int argc, char *argv[])
 	char port[PORT_MAX_LENGTH] = {0};
 	char agent_ip[AGENT_IP_MAX_LENGTH] = {0};
 
-#if defined(MICRODDS_CLIENT_UDP)
+#if defined(XRCEDDS_CLIENT_UDP)
 	Transport transport = Transport::Udp;
 #else
 	Transport transport = Transport::Serial;
@@ -622,7 +622,7 @@ MicroddsClient *MicroddsClient::instantiate(int argc, char *argv[])
 
 			break;
 
-#if defined(MICRODDS_CLIENT_UDP)
+#if defined(XRCEDDS_CLIENT_UDP)
 
 		case 'h':
 			snprintf(agent_ip, AGENT_IP_MAX_LENGTH, "%s", myoptarg);
@@ -639,7 +639,7 @@ MicroddsClient *MicroddsClient::instantiate(int argc, char *argv[])
 		case 'c':
 			custom_participant = true;
 			break;
-#endif // MICRODDS_CLIENT_UDP
+#endif // XRCEDDS_CLIENT_UDP
 
 		case 'n':
 			client_namespace = myoptarg;
@@ -656,7 +656,7 @@ MicroddsClient *MicroddsClient::instantiate(int argc, char *argv[])
 		}
 	}
 
-#if defined(MICRODDS_CLIENT_UDP)
+#if defined(XRCEDDS_CLIENT_UDP)
 
 	if (port[0] == '\0') {
 		// no port specified, use XRCE_DDS_PRT
@@ -681,7 +681,7 @@ MicroddsClient *MicroddsClient::instantiate(int argc, char *argv[])
 			 static_cast<uint8_t>(ip_i & 0xff));
 	}
 
-#endif // MICRODDS_CLIENT_UDP
+#endif // XRCEDDS_CLIENT_UDP
 
 	if (error_flag) {
 		return nullptr;
@@ -694,11 +694,11 @@ MicroddsClient *MicroddsClient::instantiate(int argc, char *argv[])
 		}
 	}
 
-	return new MicroddsClient(transport, device, baudrate, agent_ip, port, localhost_only, custom_participant,
-				  client_namespace);
+	return new XrceddsClient(transport, device, baudrate, agent_ip, port, localhost_only, custom_participant,
+				 client_namespace);
 }
 
-int MicroddsClient::print_usage(const char *reason)
+int XrceddsClient::print_usage(const char *reason)
 {
 	if (reason) {
 		PX4_WARN("%s\n", reason);
@@ -707,14 +707,14 @@ int MicroddsClient::print_usage(const char *reason)
 	PRINT_MODULE_DESCRIPTION(
 		R"DESCR_STR(
 ### Description
-MicroDDS Client used to communicate uORB topics with an Agent over serial or UDP.
+XRCE-DDS Client used to communicate uORB topics with an Agent over serial or UDP.
 
 ### Examples
-$ microdds_client start -t serial -d /dev/ttyS3 -b 921600
-$ microdds_client start -t udp -h 127.0.0.1 -p 15555
+$ xrcedds_client start -t serial -d /dev/ttyS3 -b 921600
+$ xrcedds_client start -t udp -h 127.0.0.1 -p 15555
 )DESCR_STR");
 
-	PRINT_MODULE_USAGE_NAME("microdds_client", "system");
+	PRINT_MODULE_USAGE_NAME("xrcedds_client", "system");
 	PRINT_MODULE_USAGE_COMMAND("start");
 	PRINT_MODULE_USAGE_PARAM_STRING('t', "udp", "serial|udp", "Transport protocol", true);
 	PRINT_MODULE_USAGE_PARAM_STRING('d', nullptr, "<file:dev>", "serial device", true);
@@ -729,7 +729,7 @@ $ microdds_client start -t udp -h 127.0.0.1 -p 15555
 	return 0;
 }
 
-extern "C" __EXPORT int microdds_client_main(int argc, char *argv[])
+extern "C" __EXPORT int xrcedds_client_main(int argc, char *argv[])
 {
-	return MicroddsClient::main(argc, argv);
+	return XrceddsClient::main(argc, argv);
 }

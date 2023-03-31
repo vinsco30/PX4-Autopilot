@@ -1,0 +1,5 @@
+menuconfig MODULES_XRCEDDS_CLIENT
+	bool "xrcedds_client"
+	default n
+	---help---
+		Enable support for the XRCE-DDS Client
